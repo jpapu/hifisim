@@ -88,6 +88,23 @@ body {
   border-bottom-color: var(--accent);
 }
 
+/* ---- Per-mode brief ---- */
+.mode-brief {
+  margin: 10px 28px 0;
+  padding: 9px 13px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mode-brief strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* ---- Sub-tabs (solve direction under College) ---- */
 .sub-tabs {
   display: flex;
