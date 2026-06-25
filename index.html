@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monte529 — College Savings Monte Carlo Simulator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Hi FI Sim</h1>
+      <p class="subtitle">
+        High-fidelity financial Monte Carlo — your savings and the cost of
+        college are <em>both</em> modeled as uncertain, random paths.
+      </p>
+    </header>
+
+    <nav class="tool-tabs" id="tool-tabs">
+      <button type="button" class="tool-tab active" data-primary="college">College</button>
+      <button type="button" class="tool-tab" data-primary="biphase">Bi-Phase College</button>
+      <button type="button" class="tool-tab" data-primary="fire">FIRE</button>
+    </nav>
+    <nav class="sub-tabs" id="sub-tabs">
+      <span class="sub-tabs-label">solve for ›</span>
+      <button type="button" class="sub-tab active" data-mode="forward" data-for="college">Forward</button>
+      <button type="button" class="sub-tab" data-mode="reverse" data-for="college">Reverse</button>
+      <button type="button" class="sub-tab" data-mode="reverseCoast" data-for="college">Reverse Coast</button>
+      <button type="button" class="sub-tab" data-mode="fireForward" data-for="fire">Forward</button>
+      <button type="button" class="sub-tab" data-mode="fireReverse" data-for="fire">Reverse</button>
+    </nav>
+
+    <main>
+      <div class="layout">
+      <!-- ============================ INPUTS ============================ -->
+      <form id="sim-form" class="panel inputs" autocomplete="off">
+        <fieldset>
+          <legend>
+            Portfolio
+            <button type="button" class="info-btn" id="return-info-btn" aria-label="Return assumptions and sources">&#9432;</button>
+          </legend>
+          <label id="starting-field">
+            Starting value ($)
+            <input type="number" name="startingValue" value="25000" min="0" step="1000" required />
+          </label>
+          <label id="contribution-field">
+            Monthly contribution ($)
+            <input type="number" name="monthlyContribution" value="500" min="0" step="50" placeholder="0" />
+            <small>0 = "coast" — let the portfolio grow with no new contributions.</small>
+          </label>
+          <label id="target-prob-field" hidden>
+            Target probability of success (%)
+            <input type="number" name="targetProbability" value="80" min="1" max="99" step="1" />
+            <small id="target-help">We'll find the monthly contribution that reaches this.</small>
+          </label>
+          <div class="toggle-row">
+            <span class="toggle-label">Returns</span>
+            <div class="seg">
+              <input type="radio" id="port-rand" name="portfolioMode" value="randomized" checked />
+              <label for="port-rand">Randomized</label>
+              <input type="radio" id="port-fixed" name="portfolioMode" value="fixed" />
+              <label for="port-fixed">Fixed</label>
+            </div>
+          </div>
+          <label>
+            Mean annual return (%)
+            <input type="number" name="meanAnnualReturn" value="7" step="0.1" required />
+          </label>
+          <label id="returnVolWrap">
+            Return volatility (%)
+            <input type="number" name="returnVolatility" value="12" min="0" step="0.5" required />
+            <small class="fixed-note">Ignored — fixed returns have no spread.</small>
+          </label>
+          <label id="ltcg-field" hidden>
+            Brokerage tax on gains (%)
+            <input type="number" name="ltcgRate" value="15" min="0" max="50" step="1" />
+            <small>Phase-2 brokerage gains taxed this much at withdrawal (LTCG). The 529 stays tax-free.</small>
+          </label>
+        </fieldset>
+
+        <fieldset id="cost-section">
+          <legend>
+            College cost
+            <button type="button" class="info-btn" id="cost-info-btn" aria-label="Assumptions and sources">&#9432;</button>
+          </legend>
+          <label>
+            College type
+            <select name="collegePreset" id="college-preset">
+              <option value="in_state">Public — in-state (avg)</option>
+              <option value="out_state">Public — out-of-state (avg)</option>
+              <option value="private">Private nonprofit (avg)</option>
+              <option value="prestigious">Prestigious — top 12 (avg)</option>
+              <option value="custom">Custom…</option>
+            </select>
+            <small>
+              <span id="preset-desc"></span>
+              <button type="button" class="link-btn" id="cost-info-link">assumptions &amp; sources</button>
+            </small>
+          </label>
+          <div class="toggle-row">
+            <span class="toggle-label">Includes</span>
+            <div class="seg">
+              <input type="radio" id="cost-full" name="costScope" value="full" checked />
+              <label for="cost-full">Tuition + R&amp;B</label>
+              <input type="radio" id="cost-tuition" name="costScope" value="tuition" />
+              <label for="cost-tuition">Tuition only</label>
+            </div>
+          </div>
+          <label>
+            Annual cost today ($)
+            <input type="number" name="annualCollegeCost" value="24527" min="0" step="500" required />
+          </label>
+          <label>
+            Years of college
+            <input type="number" name="yearsOfCollege" value="4" min="1" step="1" required />
+            <small>Total bill today = annual cost × years of college.</small>
+          </label>
+          <div class="toggle-row">
+            <span class="toggle-label">Cost</span>
+            <div class="seg">
+              <input type="radio" id="cost-rand" name="costMode" value="randomized" checked />
+              <label for="cost-rand">Randomized</label>
+              <input type="radio" id="cost-fixed" name="costMode" value="fixed" />
+              <label for="cost-fixed">Fixed</label>
+            </div>
+          </div>
+          <label>
+            Mean cost inflation (%)
+            <input type="number" name="meanInflation" value="5" step="0.1" required />
+          </label>
+          <label id="inflationVolWrap">
+            Inflation volatility (%)
+            <input type="number" name="inflationVolatility" value="1.5" min="0" step="0.1" required />
+            <small class="fixed-note">Ignored — fixed costs have no spread.</small>
+          </label>
+        </fieldset>
+
+        <fieldset id="fire-section" hidden>
+          <legend>Retirement</legend>
+          <label>
+            Annual spending today ($)
+            <input type="number" name="annualSpending" value="40000" min="0" step="1000" />
+          </label>
+          <label>
+            Retirement length (years)
+            <input type="number" name="retirementYears" value="30" min="1" max="60" step="1" />
+          </label>
+          <small>Today's dollars · fixed-real "4% rule" withdrawals · returns are real (after-inflation).</small>
+        </fieldset>
+
+        <fieldset>
+          <legend>Simulation</legend>
+          <label id="years-field">
+            Years until college (accumulation)
+            <input type="number" name="years" value="18" min="1" max="40" step="1" required />
+          </label>
+          <label>
+            Number of simulations
+            <input type="number" name="numSimulations" value="10000" min="100" max="50000" step="100" required />
+          </label>
+          <label>
+            Random seed (optional)
+            <input type="text" name="seed" value="" placeholder="leave blank for random" />
+            <small>Set a seed to reproduce the exact same run.</small>
+          </label>
+          <button type="submit" id="run-btn">Run Simulation</button>
+          <p id="form-error" class="error" role="alert"></p>
+        </fieldset>
+      </form>
+
+      <!-- ============================ OUTPUTS =========================== -->
+      <section class="panel outputs">
+        <div id="progress-wrap" class="progress-wrap" hidden>
+          <div class="progress-bar"><div id="progress-fill"></div></div>
+          <span id="progress-label">0%</span>
+        </div>
+
+        <div id="results" hidden>
+          <!-- Headline -->
+          <div class="headline">
+            <div class="headline-number" id="stat-success">—</div>
+            <div class="headline-label" id="headline-label">probability of fully funding college</div>
+          </div>
+
+          <!-- Bi-phase plan (populated for the Bi-Phase College tool) -->
+          <div id="phase-plan" class="phase-plan" hidden></div>
+
+          <!-- 1. Spaghetti chart -->
+          <h2>All simulations</h2>
+          <p class="chart-note" id="sim-note">
+            <span class="swatch swatch-portfolio"></span> portfolio paths &nbsp;
+            <span class="swatch swatch-cost"></span> college-cost paths &nbsp;
+            (solid lines = 10th / 50th / 90th percentiles)
+          </p>
+          <canvas id="spaghetti" class="spaghetti"></canvas>
+
+          <!-- 2. Distribution -->
+          <h2 id="dist-h2">Distribution of outcomes</h2>
+          <p class="chart-note" id="dist-note">
+            Funding ratio = ending portfolio ÷ projected college cost. The line
+            at <strong>1.0</strong> is fully funded; anything to the left is a
+            shortfall.
+          </p>
+          <div class="chart-wrap">
+            <canvas id="histogram" class="histogram"></canvas>
+          </div>
+
+          <!-- 2b. Ending portfolio vs. cost, in dollars (college only) -->
+          <div id="overlay-section">
+            <h2>Ending portfolio vs. projected cost</h2>
+            <p class="chart-note">
+              Both ending amounts on one dollar axis. Green mass to the
+              <strong>left</strong> of the orange is a shortfall; to the
+              <strong>right</strong> is a surplus. Dashed lines mark each median,
+              plus the portfolio's 10th / 90th percentiles (its likely range);
+              heights are scaled to each curve's own peak.
+            </p>
+            <div class="chart-wrap">
+              <canvas id="value-overlay" class="histogram"></canvas>
+            </div>
+          </div>
+
+          <!-- 3. Summary -->
+          <h2>Summary</h2>
+          <div class="stats-grid" id="stats-grid"></div>
+          <p class="meta-line" id="meta-line"></p>
+        </div>
+      </section>
+      </div>
+    </main>
+
+    <!-- College cost assumptions / sources -->
+    <div id="cost-modal" class="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="cost-modal-title">
+        <button type="button" class="modal-close" id="cost-modal-close" aria-label="Close">&times;</button>
+        <h3 id="cost-modal-title">College cost assumptions</h3>
+        <p>
+          Preset values are the <strong>average published “sticker” total cost of
+          attendance</strong> (tuition &amp; fees + room &amp; board) for
+          <strong>2024-25</strong>, in today's dollars. Many families pay less
+          after financial aid. The <em>Includes</em> toggle switches each preset
+          between tuition &amp; fees only and the full total (adding room &amp; board).
+        </p>
+        <table class="assump">
+          <thead>
+            <tr><th>Preset</th><th>Annual</th><th>Tuition+fees / room+board</th><th>Inflation</th><th>Vol.</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Public — in-state</td><td>$24,527</td><td>$11,610 + $12,917</td><td>4.0%</td><td>2.5%</td></tr>
+            <tr><td>Public — out-of-state</td><td>$43,697</td><td>$30,780 + $12,917</td><td>4.5%</td><td>2.0%</td></tr>
+            <tr><td>Private nonprofit</td><td>$57,192</td><td>$43,350 + $13,842</td><td>4.5%</td><td>1.5%</td></tr>
+            <tr><td>Prestigious (top ~12)</td><td>~$90,000</td><td>Ivy+ COA $85k–$95k</td><td>5.0%</td><td>1.5%</td></tr>
+          </tbody>
+        </table>
+        <p>
+          <strong>Years of college:</strong> 4 (a standard bachelor's degree).
+          <strong>Cost inflation is set per sector.</strong> Recent published
+          increases run lower (≈2.9% in-state, 3.4% out-of-state, 4.0% private
+          for 2025-26) and public tuition has even fallen in real terms over the
+          last decade — but over 30 years all sectors compounded well above
+          general inflation. Public tuition is more <em>volatile</em> (driven by
+          state-budget cycles); private and elite schools raise prices more
+          steadily. The values above blend the recent sector ordering with the
+          longer-run level for an 18-year horizon. Pick "Custom" to set your own.
+        </p>
+        <p class="sources">
+          Sources:
+          <a href="https://research.collegeboard.org/trends/college-pricing/highlights" target="_blank" rel="noopener">College Board — Trends in College Pricing 2024</a>
+          (national averages, room &amp; board);
+          <a href="https://newsroom.collegeboard.org/published-tuition-prices-public-institutions-increase-less-inflation" target="_blank" rel="noopener">sector tuition-increase rates &amp; real-terms decline</a>;
+          <a href="https://www.fa-mag.com/news/ivy-league-college-costs-soar-to-more-than--90-000-a-year-77620.html" target="_blank" rel="noopener">Ivy League cost of attendance &gt; $90k</a>
+          and
+          <a href="https://www.collegetuitioncompare.com/best-schools/ivy-league/" target="_blank" rel="noopener">Ivy League tuition comparison</a>
+          (prestigious).
+        </p>
+      </div>
+    </div>
+
+    <!-- Return / volatility assumptions -->
+    <div id="return-modal" class="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="return-modal-title">
+        <button type="button" class="modal-close" id="return-modal-close" aria-label="Close">&times;</button>
+        <h3 id="return-modal-title">Return assumptions</h3>
+        <p>
+          <strong>Mean annual return</strong> is your portfolio's expected average
+          growth per year; <strong>volatility</strong> is how much yearly returns
+          swing around it (one standard deviation). Both are <strong>nominal</strong>
+          (before inflation) — the college-cost side handles rising prices. More
+          stocks → higher expected return, but bigger swings.
+        </p>
+        <table class="assump">
+          <thead>
+            <tr><th>Allocation</th><th>Mean return</th><th>Volatility</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>100% US stocks</td><td>~10%</td><td>~18%</td></tr>
+            <tr><td>80 / 20 stocks–bonds</td><td>~9%</td><td>~14%</td></tr>
+            <tr><td>70 / 30 stocks–bonds</td><td>~8.5%</td><td>~12%</td></tr>
+            <tr><td>60 / 40 stocks–bonds</td><td>~8%</td><td>~11%</td></tr>
+            <tr><td>40 / 60 stocks–bonds</td><td>~6.5%</td><td>~8%</td></tr>
+            <tr><td>Mostly bonds / conservative</td><td>~5%</td><td>~5%</td></tr>
+          </tbody>
+        </table>
+        <p>
+          Since 1928, US large-cap stocks have returned ≈<strong>10%/yr</strong>
+          nominal with a ≈<strong>20%</strong> standard deviation; bonds ≈5%/yr with
+          ≈5%. Forward-looking estimates from major firms tend to run lower (~6–8%
+          for a balanced mix).
+        </p>
+        <p>
+          <strong>The most common 529 choice is an age-based (enrollment-date)
+          portfolio</strong> — the default "set-it-and-forget-it" option on every
+          plan. It isn't a fixed mix: it starts aggressive (~80–90% stocks while the
+          child is young) and glides to conservative (~20–30% stocks near college).
+          This tool uses one fixed assumption for the whole horizon, so pick a row
+          for your child's age — nearer 80/20 when they're little, nearer 40/60 as
+          college approaches.
+        </p>
+        <p class="sources">
+          Sources:
+          <a href="https://www.macrotrends.net/2526/sp-500-historical-annual-returns" target="_blank" rel="noopener">S&amp;P 500 historical annual returns (since 1928)</a>,
+          <a href="https://www.financewonk.com/references/historical-returns" target="_blank" rel="noopener">S&amp;P 500 return &amp; standard-deviation data</a>, and
+          <a href="https://www.savingforcollege.com/article/understanding-529-investment-options" target="_blank" rel="noopener">529 investment options (age-based portfolios)</a>.
+        </p>
+      </div>
+    </div>
+
+    <script src="vendor/chart.umd.min.js"></script>
+    <script src="charts.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+# Keep the published repo self-contained — exclude non-app files
+meeting-notes-*.md
+.claude/
+.DS_Store
