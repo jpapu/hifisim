@@ -304,6 +304,15 @@
     }
   }
 
+  var MODE_BRIEFS = {
+    forward: '<strong>College · Forward.</strong> Enter a monthly contribution and see the probability it funds college — plus the full spread of outcomes.',
+    reverse: '<strong>College · Reverse.</strong> Pick a target probability and get the monthly contribution required to fund college.',
+    reverseCoast: "<strong>College · Reverse Coast.</strong> Adding nothing more, find the lump sum you'd need invested today to coast to your college goal.",
+    biphase: '<strong>Bi-Phase College.</strong> Fund a tax-free 529 until it covers in-state, then a taxable brokerage for the gap up to a pricier school — solves the monthly amount and when to switch.',
+    fireForward: '<strong>FIRE · Forward.</strong> Enter a nest egg and annual spending; see the probability it lasts your whole retirement (the 4% rule, stress-tested against market risk).',
+    fireReverse: '<strong>FIRE · Reverse.</strong> Pick a target probability and get the nest egg — your FI number — needed to sustain that spending.',
+  };
+
   function applyMode(mode) {
     currentMode = mode;
     var isFire = mode === 'fireForward' || mode === 'fireReverse';
@@ -331,6 +340,7 @@
       : "We'll find the monthly contribution that reaches this.";
 
     setSectionLabels(isFire);
+    document.getElementById('mode-brief').innerHTML = MODE_BRIEFS[mode] || '';
 
     // Keep the last run's results/graphs visible when switching tabs.
     progressWrap.hidden = true;
