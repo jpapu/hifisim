@@ -141,7 +141,10 @@
         </fieldset>
 
         <fieldset id="fire-section" hidden>
-          <legend>Retirement target</legend>
+          <legend>
+            Retirement target
+            <button type="button" class="info-btn" id="fire-info-btn" aria-label="Retirement assumptions and sources">&#9432;</button>
+          </legend>
           <label>
             Annual spending today ($)
             <input type="number" name="annualSpending" value="60000" min="0" step="1000" />
@@ -161,7 +164,7 @@
           </label>
           <label>
             Inflation volatility (%)
-            <input type="number" name="fireInflationVol" value="1" min="0" step="0.1" />
+            <input type="number" name="fireInflationVol" value="1.5" min="0" step="0.1" />
           </label>
           <small>Returns are nominal; the FI number is inflated to your retirement date.</small>
         </fieldset>
@@ -339,6 +342,49 @@
           <a href="https://www.macrotrends.net/2526/sp-500-historical-annual-returns" target="_blank" rel="noopener">S&amp;P 500 historical annual returns (since 1928)</a>,
           <a href="https://www.financewonk.com/references/historical-returns" target="_blank" rel="noopener">S&amp;P 500 return &amp; standard-deviation data</a>, and
           <a href="https://www.savingforcollege.com/article/understanding-529-investment-options" target="_blank" rel="noopener">529 investment options (age-based portfolios)</a>.
+        </p>
+      </div>
+    </div>
+
+    <!-- Retirement (FIRE) assumptions -->
+    <div id="fire-modal" class="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="fire-modal-title">
+        <button type="button" class="modal-close" id="fire-modal-close" aria-label="Close">&times;</button>
+        <h3 id="fire-modal-title">Retirement assumptions</h3>
+        <p>
+          Your <strong>FI number</strong> = annual spending ÷ safe withdrawal
+          rate, inflated to your retirement date. These three inputs set it.
+        </p>
+
+        <p><strong>Safe withdrawal rate</strong> — the share of your portfolio you
+        draw in year one (4% ⇒ a 25× nest egg). The biggest lever.</p>
+        <table class="assump">
+          <thead>
+            <tr><th>Rate</th><th>When to use</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>4%</td><td>The classic "4% rule" — ~95% success over a 30-year retirement.</td></tr>
+            <tr><td>3.25–3.5%</td><td>Early retirement (40–50+ year horizons); Morningstar's 2024 baseline is ≈3.7%.</td></tr>
+            <tr><td>4.5–5%</td><td>Only with flexible spending (cut in bad years) or other income (Social Security, pension).</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          <strong>Mean inflation</strong> — long-run U.S. CPI ≈ <strong>3%/yr</strong>
+          (≈2.5% over 1990–2018; the Fed targets 2%).<br />
+          <strong>Inflation volatility</strong> — the year-to-year swing. ≈<strong>1.5%</strong>
+          in the recent anchored era; bump toward 3% to stress-test a 1970s-style
+          inflation shock.
+        </p>
+
+        <p class="sources">
+          Sources:
+          <a href="https://en.wikipedia.org/wiki/Trinity_study" target="_blank" rel="noopener">Trinity Study</a>
+          and
+          <a href="https://en.wikipedia.org/wiki/William_Bengen" target="_blank" rel="noopener">Bengen (4% rule)</a>;
+          <a href="https://www.morningstar.com/retirement/morningstars-retirement-income-research-reevaluating-4-withdrawal-rule" target="_blank" rel="noopener">Morningstar safe-withdrawal research</a>;
+          <a href="https://www.usinflationcalculator.com/inflation/historical-inflation-rates/" target="_blank" rel="noopener">U.S. CPI history</a>
+          (<a href="https://www.macrotrends.net/2497/historical-inflation-rate-by-year" target="_blank" rel="noopener">by year</a>).
         </p>
       </div>
     </div>
