@@ -483,6 +483,7 @@
   var infoModals = [
     wireModal(document.getElementById('cost-modal'), ['cost-info-btn', 'cost-info-link'], 'cost-modal-close'),
     wireModal(document.getElementById('return-modal'), ['return-info-btn'], 'return-modal-close'),
+    wireModal(document.getElementById('fire-modal'), ['fire-info-btn'], 'fire-modal-close'),
   ].filter(Boolean);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') infoModals.forEach(function (m) { m.hidden = true; });
