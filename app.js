@@ -62,16 +62,13 @@
       numSimulations: int('numSimulations'),
       seed: form.elements['seed'].value.trim(),
       drawCount: 300,
-      // FIRE inputs (ignored by the college tools)
-      annualSpending: numOr0('annualSpending'),
-      retirementYears: int('retirementYears'),
     };
   }
 
   function validate(i) {
     var errs = [];
     if (!(i.startingValue >= 0)) errs.push('Starting value must be ≥ 0.');
-    if (!(i.years >= 1 && i.years <= 40)) errs.push('Years until college must be 1–40.');
+    if (!(i.years >= 1 && i.years <= 60)) errs.push('Years must be between 1 and 60.');
     if (!(i.monthlyContribution >= 0)) errs.push('Monthly contribution must be ≥ 0.');
     if (!(i.annualCollegeCost >= 0)) errs.push('Annual cost must be ≥ 0.');
     if (!(i.yearsOfCollege >= 1)) errs.push('Years of college must be ≥ 1.');
@@ -147,8 +144,8 @@
   // show the required monthly contribution (or "out of reach").
   function applyHeadline(result) {
     if (!result.solve) {
-      labelEl.textContent = result.fire
-        ? 'probability your money lasts all ' + result.meta.years + ' years'
+      labelEl.textContent = currentMode === 'fireForward'
+        ? 'probability your portfolio reaches your FI number'
         : 'probability of fully funding college';
       return;
     }
@@ -196,6 +193,7 @@
       setProgress(1, 1);
       progressWrap.hidden = true;
       results.hidden = false; // unhide BEFORE rendering so canvases have size
+      msg.labels = labelsFor(currentMode); // goal wording (college cost vs FI number)
       MonteCharts.render(msg);
       applyHeadline(msg);
       renderPhasePlan(msg);
@@ -217,7 +215,25 @@
     e.preventDefault();
     errEl.textContent = '';
 
+    var isFire = currentMode === 'fireForward' || currentMode === 'fireReverse';
+
     var inputs = readInputs();
+    // FIRE accumulation: the goal is the FI number (annual spend ÷ safe
+    // withdrawal rate), inflated to the retirement date. Remap the retirement
+    // fields onto the shared accumulation engine before validating/running.
+    if (isFire) {
+      var swr = num('withdrawalRate') / 100;
+      if (!(swr > 0 && swr < 1)) {
+        errEl.textContent = 'Safe withdrawal rate must be between 0 and 100%.';
+        return;
+      }
+      inputs.annualCollegeCost = num('annualSpending') / swr; // today's FI number
+      inputs.yearsOfCollege = 1;
+      inputs.years = int('accumYears');
+      inputs.meanInflation = num('fireInflation') / 100;
+      inputs.inflationVolatility = num('fireInflationVol') / 100;
+    }
+
     var errs = validate(inputs);
     if (errs.length) {
       errEl.textContent = errs[0];
@@ -260,17 +276,15 @@
     worker.onerror = function (ev) {
       fail((ev && ev.message) || 'worker error — if opened via file://, serve over http instead');
     };
-    if (currentMode === 'fireReverse') {
-      worker.postMessage({ type: 'solveFire', inputs: inputs, targetP: targetP });
-    } else if (currentMode === 'fireForward') {
-      worker.postMessage({ type: 'runFire', inputs: inputs });
-    } else if (currentMode === 'biphase') {
+    if (currentMode === 'biphase') {
       worker.postMessage({ type: 'solveBiPhase', inputs: inputs, targetP: targetP });
     } else if (currentMode === 'reverseCoast') {
       worker.postMessage({ type: 'solveCoast', inputs: inputs, targetP: targetP });
-    } else if (currentMode === 'reverse') {
+    } else if (currentMode === 'reverse' || currentMode === 'fireReverse') {
+      // FIRE reverse solves the monthly contribution to reach the FI number.
       worker.postMessage({ type: 'solve', inputs: inputs, targetP: targetP });
     } else {
+      // forward + fireForward: project the portfolio vs. the goal.
       worker.postMessage({ type: 'run', inputs: inputs });
     }
   });
@@ -281,27 +295,23 @@
   var subNav = document.getElementById('sub-tabs');
 
   function setSectionLabels(isFire) {
-    var simNote = document.getElementById('sim-note');
-    var distH2 = document.getElementById('dist-h2');
-    var distNote = document.getElementById('dist-note');
-    if (isFire) {
-      simNote.innerHTML =
-        '<span class="swatch swatch-portfolio"></span> portfolio balance through retirement &nbsp; ' +
-        '(solid lines = 10th / 50th / 90th percentiles); paths that hit $0 ran out.';
-      distH2.textContent = 'Ending balance';
-      distNote.innerHTML =
-        "How much is left at the end of retirement (today's dollars). The orange bar at " +
-        '<strong>$0</strong> is the share of runs that ran out.';
-    } else {
-      simNote.innerHTML =
-        '<span class="swatch swatch-portfolio"></span> portfolio paths &nbsp; ' +
-        '<span class="swatch swatch-cost"></span> college-cost paths &nbsp; ' +
-        '(solid lines = 10th / 50th / 90th percentiles)';
-      distH2.textContent = 'Distribution of outcomes';
-      distNote.innerHTML =
-        'Funding ratio = ending portfolio ÷ projected college cost. The line at ' +
-        '<strong>1.0</strong> is fully funded; anything to the left is a shortfall.';
-    }
+    var goalPaths = isFire ? 'FI-number paths' : 'college-cost paths';
+    document.getElementById('sim-note').innerHTML =
+      '<span class="swatch swatch-portfolio"></span> portfolio paths &nbsp; ' +
+      '<span class="swatch swatch-cost"></span> ' + goalPaths + ' &nbsp; ' +
+      '(solid lines = 10th / 50th / 90th percentiles)';
+    document.getElementById('dist-h2').textContent = 'Distribution of outcomes';
+    document.getElementById('dist-note').innerHTML = isFire
+      ? 'Funding ratio = ending portfolio ÷ FI number. The line at <strong>1.0</strong> means you can cover your spending at the chosen withdrawal rate; anything to the left falls short.'
+      : 'Funding ratio = ending portfolio ÷ projected college cost. The line at <strong>1.0</strong> is fully funded; anything to the left is a shortfall.';
+    document.getElementById('overlay-h2').textContent = isFire
+      ? 'Ending portfolio vs. FI number'
+      : 'Ending portfolio vs. projected cost';
+    document.getElementById('overlay-note').innerHTML =
+      'Both ending amounts on one dollar axis. Green mass to the <strong>left</strong> of the orange ' +
+      (isFire ? 'falls short of your FI number' : 'is a shortfall') +
+      '; to the <strong>right</strong> is a surplus. Dashed lines mark each median, plus the portfolio’s ' +
+      '10th / 90th percentiles; heights are scaled to each curve’s own peak.';
   }
 
   var MODE_BRIEFS = {
@@ -309,9 +319,18 @@
     reverse: '<strong>College · Reverse.</strong> Pick a target probability and get the monthly contribution required to fund college.',
     reverseCoast: "<strong>College · Reverse Coast.</strong> Adding nothing more, find the lump sum you'd need invested today to coast to your college goal.",
     biphase: '<strong>Bi-Phase College.</strong> Fund a tax-free 529 until it covers in-state, then a taxable brokerage for the gap up to a pricier school — solves the monthly amount and when to switch.',
-    fireForward: '<strong>FIRE · Forward.</strong> Enter a nest egg and annual spending; see the probability it lasts your whole retirement (the 4% rule, stress-tested against market risk).',
-    fireReverse: '<strong>FIRE · Reverse.</strong> Pick a target probability and get the nest egg — your FI number — needed to sustain that spending.',
+    fireForward: '<strong>FIRE · Forward.</strong> Project your portfolio’s growth and see the chance it reaches your FI number (annual spend ÷ safe withdrawal rate, inflated) — enough to cover expenses.',
+    fireReverse: '<strong>FIRE · Reverse.</strong> Find the monthly contribution needed to hit your FI number by your target year, at a chosen probability.',
   };
+
+  // Goal wording per scenario; charts.js reads result.labels (college defaults).
+  var LABELS = {
+    college: { goalSeries: 'Projected college cost', goalAxis: 'cost', goalCard: 'projected cost', funded: 'fully funded' },
+    fire: { goalSeries: 'FI number', goalAxis: 'FI number', goalCard: 'FI number', funded: 'enough to retire' },
+  };
+  function labelsFor(mode) {
+    return mode === 'fireForward' || mode === 'fireReverse' ? LABELS.fire : LABELS.college;
+  }
 
   function applyMode(mode) {
     currentMode = mode;
@@ -322,21 +341,21 @@
       t.classList.toggle('active', t.getAttribute('data-mode') === mode);
     });
 
-    // Form fields per mode.
-    document.getElementById('contribution-field').hidden = mode !== 'forward';
+    // Form fields per mode. Contribution shows for the forward (projection)
+    // modes; target shows for the solve modes.
+    document.getElementById('contribution-field').hidden = !(mode === 'forward' || mode === 'fireForward');
     document.getElementById('target-prob-field').hidden = !isSolve;
     document.getElementById('ltcg-field').hidden = mode !== 'biphase';
-    // Starting value is the solved unknown for reverse-coast and reverse-FIRE.
-    document.getElementById('starting-field').hidden = mode === 'reverseCoast' || mode === 'fireReverse';
+    // Starting value is the solved unknown only for reverse-coast.
+    document.getElementById('starting-field').hidden = mode === 'reverseCoast';
     // Scenario sections.
     document.getElementById('cost-section').hidden = isFire;
     document.getElementById('fire-section').hidden = !isFire;
     document.getElementById('years-field').hidden = isFire;
-    document.getElementById('overlay-section').hidden = isFire;
+    document.getElementById('overlay-section').hidden = false;
 
     document.getElementById('target-help').textContent =
       mode === 'reverseCoast' ? "We'll find the starting lump sum that reaches this."
-      : mode === 'fireReverse' ? "We'll find the nest egg (FI number) that reaches this."
       : "We'll find the monthly contribution that reaches this.";
 
     setSectionLabels(isFire);

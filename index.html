@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Monte529 — College Savings Monte Carlo Simulator</title>
+    <title>Hi FI Sim — Monte Carlo savings simulator</title>
+    <meta
+      name="description"
+      content="Hi FI Sim — a browser-only Monte Carlo suite for college savings (529), bi-phase 529 + brokerage, and FIRE/retirement planning. Runs entirely in your browser; nothing is collected."
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -137,16 +141,29 @@
         </fieldset>
 
         <fieldset id="fire-section" hidden>
-          <legend>Retirement</legend>
+          <legend>Retirement target</legend>
           <label>
             Annual spending today ($)
-            <input type="number" name="annualSpending" value="40000" min="0" step="1000" />
+            <input type="number" name="annualSpending" value="60000" min="0" step="1000" />
           </label>
           <label>
-            Retirement length (years)
-            <input type="number" name="retirementYears" value="30" min="1" max="60" step="1" />
+            Safe withdrawal rate (%)
+            <input type="number" name="withdrawalRate" value="4" min="0.1" max="20" step="0.1" />
+            <small>FI number = annual spend ÷ this rate (4% ≈ 25× spending).</small>
           </label>
-          <small>Today's dollars · fixed-real "4% rule" withdrawals · returns are real (after-inflation).</small>
+          <label>
+            Years of accumulation
+            <input type="number" name="accumYears" value="20" min="1" max="60" step="1" />
+          </label>
+          <label>
+            Mean inflation (%)
+            <input type="number" name="fireInflation" value="3" step="0.1" />
+          </label>
+          <label>
+            Inflation volatility (%)
+            <input type="number" name="fireInflationVol" value="1" min="0" step="0.1" />
+          </label>
+          <small>Returns are nominal; the FI number is inflated to your retirement date.</small>
         </fieldset>
 
         <fieldset>
@@ -208,8 +225,8 @@
 
           <!-- 2b. Ending portfolio vs. cost, in dollars (college only) -->
           <div id="overlay-section">
-            <h2>Ending portfolio vs. projected cost</h2>
-            <p class="chart-note">
+            <h2 id="overlay-h2">Ending portfolio vs. projected cost</h2>
+            <p class="chart-note" id="overlay-note">
               Both ending amounts on one dollar axis. Green mass to the
               <strong>left</strong> of the orange is a shortfall; to the
               <strong>right</strong> is a surplus. Dashed lines mark each median,
