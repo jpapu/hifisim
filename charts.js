@@ -166,7 +166,9 @@
   var histChart = null;
   var overlayChart = null;
 
-  function drawHistogram(canvasEl, hist) {
+  function drawHistogram(canvasEl, result) {
+    var hist = result.histogram.fundingRatio;
+    var lab = result.labels || { goalAxis: 'cost', funded: 'fully funded' };
     var edges = hist.binEdges;
     var counts = hist.counts;
     var bw = edges[1] - edges[0];
@@ -214,7 +216,7 @@
           x: {
             title: {
               display: true,
-              text: 'funding ratio (portfolio ÷ cost)',
+              text: 'funding ratio (portfolio ÷ ' + lab.goalAxis + ')',
               color: COLOR.muted,
             },
             ticks: { color: COLOR.muted, maxTicksLimit: 10, autoSkip: true },
@@ -227,15 +229,16 @@
           },
         },
       },
-      plugins: [fundedLinePlugin(hist)],
+      plugins: [fundedLinePlugin(hist, lab.funded)],
     });
   }
 
   // Draws a dashed vertical line at funding ratio = 1.0.
-  function fundedLinePlugin(hist) {
+  function fundedLinePlugin(hist, fundedText) {
     var edges = hist.binEdges;
     var bw = edges[1] - edges[0];
     var nbins = hist.counts.length;
+    var marker = (fundedText || 'fully funded') + ' (1.0)';
     return {
       id: 'fundedLine',
       afterDatasetsDraw: function (chart) {
@@ -261,8 +264,8 @@
         ctx.setLineDash([]);
         ctx.fillStyle = COLOR.text;
         ctx.font = '11px sans-serif';
-        ctx.textAlign = px < area.left + 90 ? 'left' : 'right';
-        ctx.fillText('fully funded (1.0)', ctx.textAlign === 'left' ? px + 5 : px - 5, area.top + 11);
+        ctx.textAlign = px < area.left + 110 ? 'left' : 'right';
+        ctx.fillText(marker, ctx.textAlign === 'left' ? px + 5 : px - 5, area.top + 11);
         ctx.restore();
       },
     };
@@ -374,7 +377,7 @@
             borderWidth: 2,
           },
           {
-            label: 'Projected college cost',
+            label: (result.labels && result.labels.goalSeries) || 'Projected college cost',
             data: buildDensity(ec, lo, hi, nbins),
             borderColor: COLOR.cost,
             backgroundColor: 'rgba(255,122,89,0.20)',
@@ -441,6 +444,7 @@
     successEl.style.color =
       prob >= 0.7 ? COLOR.portfolio : prob >= 0.4 ? '#f5c451' : COLOR.cost;
 
+    var lab = result.labels || { goalCard: 'projected cost' };
     var fr = sm.percentiles.fundingRatio;
     var ep = sm.percentiles.endingPortfolio;
     var pc = sm.percentiles.projectedCost;
@@ -459,13 +463,13 @@
       },
       {
         v: fmtMoney(sm.medianProjectedCost),
-        k: 'Median projected cost',
+        k: 'Median ' + lab.goalCard,
         sub: fmtMoneyShort(pc.p10) + ' – ' + fmtMoneyShort(pc.p90) + ' (p10–p90)',
       },
       {
         v: (surplusPositive ? '' : '−') + fmtMoney(Math.abs(sm.medianSurplus)),
         k: surplusPositive ? 'Median surplus' : 'Median shortfall',
-        sub: surplusPositive ? 'left over after the bill' : 'gap to cover',
+        sub: surplusPositive ? 'above your goal' : 'gap to your goal',
         color: surplusPositive ? COLOR.portfolio : COLOR.cost,
       },
     ];
@@ -584,7 +588,7 @@
       drawBalanceHistogram(document.getElementById('histogram'), result);
       renderFireSummary(result);
     } else {
-      drawHistogram(document.getElementById('histogram'), result.histogram.fundingRatio);
+      drawHistogram(document.getElementById('histogram'), result);
       drawValueOverlay(document.getElementById('value-overlay'), result);
       renderSummary(result);
     }

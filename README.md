@@ -39,15 +39,14 @@ as sub-tabs.
   after-tax value ≥ endpoint cost. The chart marks the 529→brokerage switch.
   Because the brokerage is taxed, this needs slightly more than the single-
   account Reverse tool — that premium is the tax drag.
-- **FIRE** (sub-tabs: *Forward · Reverse*) — a **decumulation** model in today's
-  dollars: from a nest egg you withdraw a fixed-real amount (the "4% rule") each
-  year from a still-volatile portfolio over a fixed retirement length; **success
-  = the balance never hits $0** (captures sequence-of-returns risk). *Forward* →
-  probability your money lasts; *Reverse* → the **FI number** (nest egg) needed
-  for a target survival probability. Returns are real (after-inflation). Outputs:
-  a balance-through-retirement spaghetti (paths that hit $0 ran out) and an
-  ending-balance distribution. This is the one tool that extends the engine
-  (decumulation) rather than just reconfiguring it.
+- **FIRE** (sub-tabs: *Forward · Reverse*) — an **accumulation** projection: grow
+  a portfolio (starting value + monthly contributions, nominal returns) and
+  compare it to your **FI number** = annual spend ÷ safe withdrawal rate,
+  inflated to your retirement date. *Forward* → probability your portfolio reaches
+  the FI number (i.e., can cover expenses at the chosen withdrawal rate);
+  *Reverse* → the monthly contribution required to get there at a target
+  probability. Reuses the College engine and charts, with the goal being the FI
+  number instead of college cost.
 
 ## Running it
 
